@@ -1,19 +1,24 @@
 from flask import Flask, render_template, request
-from flask_sqlalchemy import SQLAlchemy
+from flask_restx import Api
+from app.config import Config
+from app.database import db
+from app.models import Employee
 
 
-app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///employee.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
+def create_app(config: Config) -> Flask:
+    application = Flask(__name__)
+    application.config.from_object(config)
+    application.app_context().push()
+
+    return application
 
 
-class Employee(db.Model):
-    __tablename__ = 'employee'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.Text(100))
-    email = db.Column(db.Text(100))
-    phone = db.Column(db.Integer)
+def configure_app(application: Flask):
+    db.init_app(application)
+
+app_config = Config()
+app = create_app(app_config)
+configure_app(app)
 
 '''
 with app.app_context():
@@ -21,10 +26,12 @@ with app.app_context():
     db.create_all()
 '''
 
+
 @app.get('/')
 def index():
     employees = Employee.query.all()
     return render_template('index.html', employees=employees)
+
 
 @app.post('/update')
 def update():
@@ -38,6 +45,7 @@ def update():
     employees = Employee.query.all()
     return render_template('index.html', employees=employees)
 
+
 @app.post('/insert')
 def insert():
     employee = Employee(name=request.form.get('name'), email=request.form.get('email'), phone=request.form.get('phone'))
@@ -46,6 +54,7 @@ def insert():
     employees = Employee.query.all()
     return render_template('index.html', employees=employees)
 
+
 @app.route('/delete/<eid>')
 def delete_employee(eid):
     db.session.delete(Employee.query.get(eid))
@@ -53,5 +62,7 @@ def delete_employee(eid):
     employees = Employee.query.all()
     return render_template('index.html', employees=employees)
 
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run()
+
